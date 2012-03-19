@@ -1,17 +1,72 @@
+<!doctype html>
 <html>
     <head>
+        <title>Seqshark</title>
+        <link type="text/css" href="css/settings.css" rel="stylesheet" />
+        <link type="text/css" href="css/main.css" rel="stylesheet" />
         <script src="js/jquery-1.7.1.min.js"></script>
         <script src="js/jsut/ut.js"></script>
         <script src="js/ss.js"></script>
         <script>
+            var config = ss.getConfig();
             $(function() {
-                ss.parseFormattedStr();
-                //ss.parsePsml();
-                console.log(ss.drawNodes());
-                ss.drawSeqs();
+                ss.initPage();
             });
         </script>
     </head>
     <body>
+        <div id="container">
+            <div id="settings">
+                <div id="logo">
+                    <pre>
+ _____                _                _    
+/  ___|              | |              | |   
+\ `--.  ___  __ _ ___| |__   __ _ _ __| | __
+ `--. \/ _ \/ _` / __| '_ \ / _` | '__| |/ /
+/\__/ /  __/ (_| \__ \ | | | (_| | |  |   < 
+\____/ \___|\__, |___/_| |_|\__,_|_|  |_|\_\
+               | |                          
+               |_|
+                   </pre>
+                </div>
+                <h2>Settings</h2>
+                <div class="section-group">
+                    <span>PSML file (Exported from Wireshark):</span>
+                    <button id="psml-file-browse">Browse...</button>
+                    <span id="psml-file-name"></span>
+                    <input id="psml-file-data" type="file" />
+                </div>
+
+                <div class="section-group">
+                    <label class="checkbox">
+                        <input id="show-number-cb" type="checkbox">
+                        <span>Show message seqence number</span>
+                    </label>
+                </div>
+
+                <!--
+                <div class="section-group">
+                    <span>Max message length:</span>
+                    <input id="max-msg-len" type="text" size="1" maxlength="2" />
+                </div>
+                -->
+
+                <div class="section-group">
+                    <label>
+                        <span style="color:gray">Coming soon: Filter &amp; Message fomatter</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="seqtext">
+                <textarea wrap="off">
+                </textarea>
+            </div>
+        </div>
+
+        <div id="seq">
+            <textarea wrap="off" readonly="readonly">
+            </textarea>
+        <div>
     </body>
 </html>

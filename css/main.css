@@ -1,0 +1,60 @@
+body { 
+    font-family: Arial, 'Microsoft Yahei', Simsun, sans-serif;
+    font-size: 14px;
+    margin: 0px;
+    padding: 0px;
+}
+
+h2 {
+    margin: 3px;
+}
+
+#container {
+    width: 99%;
+    height: 300px;
+    margin: 0px;
+    padding: 0px;
+    display: -webkit-box;
+}
+
+#settings {
+    -webkit-box-flex: 1;
+    border: 1px solid #bbb;
+    margin: 6px;
+    padding: 10px;
+}
+
+#seqtext {
+    -webkit-box-flex: 8;
+    margin: 5px;
+    padding: 0px;
+    height: 95%;
+}
+
+#seqtext textarea {
+    width: 100%;
+    height: 100%;
+    resize: none;
+    border-radius: 5px;
+    border: 1px solid #bbb;
+    font-family: Lucida Console, Monaco, Courier New, mono, monospace;
+    margin: 0px;
+    padding: 5px;
+}
+
+#seq textarea {
+    width: 98%;
+    height: 550px;
+    font-family: Lucida Console, Monaco, Courier New, mono, monospace;
+    font-size: 12px;
+    resize: none;
+    padding: 5px;
+    margin: 10px;
+}
+
+#logo pre {
+    font-family: Lucida Console, Monaco, Courier New, mono, monospace;
+    font-size: 10px;
+    margin: 0px;
+    padding: 0px;
+}

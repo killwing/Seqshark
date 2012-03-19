@@ -6,67 +6,56 @@ var intervals = [];
 var minTitleLen = 17; // ip addr takes 15
 var minInterval = 20;
 
-var seqStr = function() {
-    /* [1]Alice(192.168.1.1) | [2]Bob(192.168.1.2) | [3]Carol(192.168.1.3)
-
-    1|1->2|sip|INVITE
-    2|2->3|sip|INVITE
-    3|3->1|sip|200 OK
-    */
-};
-
-var ss = {};
-ss.parseFormattedStr = function() {
-    var str = seqStr.mlstr().split('\n');
-    var nodeslist = str[0].split('|');
-    nodeslist.forEach(function(node, i) {
-        var nodeinfo =
-          /\[(\d+)\](\w*)(\((\d{1,3}\.\d{1,3}.\d{1,3}.\d{1,3})\))?/.exec(node);
-        if (nodeinfo) {
-            var found = false;
-            for (var i = 0; i != nodes.length; ++i) {
-                if (nodes[i].id == nodeinfo[1]) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                nodes.push({
-                    id: nodeinfo[1],
-                    name: nodeinfo[2],
-                    ip: nodeinfo[4],
-                });
-            }
-        }
-    });
-
-    str.forEach(function(seq, i) {
-        var seqinfo = /(\d*)\|(\d+)->(\d+)\|(.*)\|(.*)/.exec(seq);
-        if (seqinfo) {
-            seqs.push({
-                no: seqinfo[1],
-                time: '',
-                source: seqinfo[2],
-                destination: seqinfo[3],
-                protocol: seqinfo[4],
-                length: '',
-                info: seqinfo[5],
-            });
-        }
-    });
-    console.log(nodes);
-    console.log(seqs);
-    computeIntervals();
-};
-
 var config = {
-    msgTemplate: '# $',
-    maxMsgLen: 10,
+    msgFmt: '',
+    maxMsgLen: 15,
+    showNo: true,
+    ui: {
+        corner: '+',
+        topcorner: '.',
+        btcorner: "'",
+        bar: '|',
+        space: ' ',
+        newline: '\n',
+    },
+
+    seqText: function() {
+/* [1]Alice(192.168.1.1) | [2]Atlanta.com(192.168.1.2) | [3]biloxi.com(192.168.2.1) | [4]Bob(192.168.2.2)
+
+  |1   |   |off hook
+ 1|1->2|sip|INVITE
+ 2|2->1|sip|100 Trying
+ 3|2->3|sip|INVITE
+ 4|3->2|sip|100 Trying
+ 5|3->4|sip|INVITE
+ 6|4->3|sip|180 Ringing
+ 7|3->2|sip|180 Ringing
+ 8|2->1|sip|180 Ringing
+ 9|4->3|sip|200 OK
+10|3->2|sip|200 OK
+11|2->1|sip|200 OK
+12|1->4|sip|ACK
+  |4   |   |on hook
+13|4->1|sip|BYE
+14|1->4|sip|200 OK
+*/
+    },
+
+    protoFilter: ['SIP'],
+};
+
+var rtConfig = {
+    showName: false,
+    showIp: false,
 };
 
 var genMessage = function(seq) {
-    return config.msgTemplate.replace('#', seq.no)
-        .replace('$', seq.info).slice(0, config.maxMsgLen);
+    var msg = '';
+    if (config.showNo && seq.no) {
+        msg += seq.no + '. ';
+    }
+    msg += seq.info;
+    return msg.slice(0, config.maxMsgLen);
 };
 
 var computeIntervals = function() {
@@ -97,12 +86,89 @@ var countIntervals = function(i, j) {
     return sum;
 };
 
-ss.parsePsml = function() {
-    var xml = '<psml version="0"> <structure> <section>No.</section> <section>Time</section> <section>Source</section> <section>Destination</section> <section>Protocol</section> <section>Length</section> <section>Info</section> </structure> <packet> <section>1207</section> <section>0.896614</section> <section>110.011.251.188</section> <section>80.156.149.133</section> <section>SIP</section> <section>338</section> <section>Request: OPTIONS sip:80.156.149.133:5060</section> </packet> <packet> <section>1208</section> <section>0.896616</section> <section>10.0.25.188</section> <section>80.156.149.133</section> <section>SIP</section> <section>342</section> <section>Request: OPTIONS sip:80.156.149.133:5060</section> </packet> <packet> <section>1209</section> <section>0.896616</section> <section>110.011.251.188</section> <section>110.011.251.188</section> <section>SIP</section> <section>342</section> <section>Request: OPTIONS sip:80.156.149.133:5060</section> </packet> </psml>';
-    xmlDoc = $.parseXML(xml),
+var computeTitleLen = function(node) {
+    var titleLen = minTitleLen;
+    if (node.name.length+2 > titleLen) {
+        titleLen = node.name.length + 2; // two spaces
+    }
+    if (!titleLen%2) { // make odd
+        ++titleLen;
+    }
+    return titleLen;
+};
+
+
+var ss = {};
+ss.getConfig = function() {
+    return config;
+};
+
+ss.resetData = function() {
+    nodes = [];
+    seqs = [];
+    intervals = [];
+};
+
+ss.parseFormattedStr = function(text) {
+    ss.resetData();
+
+    var str = text.split('\n');
+    var nodeslist = str[0].split('|');
+    nodeslist.forEach(function(node, i) {
+        var nodeinfo =
+          /\[(\d+)\]([\w\.\-\_]*)(\((\d{1,3}\.\d{1,3}.\d{1,3}.\d{1,3})\))?/.exec(node);
+        if (nodeinfo) {
+            var found = false;
+            for (var i = 0; i != nodes.length; ++i) {
+                if (nodes[i].id == nodeinfo[1]) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                nodes.push({
+                    id: nodeinfo[1],
+                    name: nodeinfo[2] || '',
+                    ip: nodeinfo[4] || '',
+                });
+            }
+        }
+    });
+
+    str.forEach(function(seq, i) {
+        var seqinfo = /(\d*)\s*\|\s*(\d+)\s*(->\s*(\d+))?\s*\|(.*)\|(.*)/.exec(seq);
+        if (seqinfo) {
+            seqs.push({
+                no: seqinfo[1] || '',
+                time: '',
+                source: seqinfo[2],
+                destination: seqinfo[4] || seqinfo[2],
+                protocol: seqinfo[5].trim().toUpperCase(),
+                length: '',
+                info: seqinfo[6].trim(),
+            });
+        }
+    });
+
+    console.debug(nodes);
+    console.debug(seqs);
+    computeIntervals();
+};
+
+
+
+ss.parsePsml = function(psml) {
+    ss.resetData();
+
+    xmlDoc = $.parseXML(psml),
     $packets = $(xmlDoc).find('psml packet');
     $.each($packets, function(i, packet) {
         var sections = $(packet).children('section');
+
+        //if (config.protoFilter.indexOf(sections[4].textContent) == -1) {
+        //    return;
+        //}
+
         var src = sections[2].textContent;
         var dst = sections[3].textContent;
 
@@ -137,7 +203,6 @@ ss.parsePsml = function() {
             }
             nodes.push(dstnode);
         }
-        // [id]name(ip)
 
         seqs.push({
             no: sections[0].textContent,
@@ -149,71 +214,83 @@ ss.parsePsml = function() {
             info: sections[6].textContent,
         });
     });
-    console.log(seqs);
-    console.log(nodes);
+
+    console.debug(seqs);
+    console.debug(nodes);
     computeIntervals();
 };
 
-var computeTitleLen = function(node) {
-    var titleLen = minTitleLen;
-    if (node.name.length+2 > titleLen) {
-        titleLen = node.name.length + 2; // two spaces
-    }
-    if (!titleLen%2) { // make odd
-        ++titleLen;
-    }
-    return titleLen;
-};
 
-var corner = '+';
-var bar = '|';
-var topcorner = '.';
-var btcorner = "'";
-
-ss.drawNodes = function() {
+var buildNodes = function() {
     var boxline = new ut.StringBuilder();
-    var text = new ut.StringBuilder();
+    var textip = new ut.StringBuilder();
+    var textname = new ut.StringBuilder();
     var blankline = new ut.StringBuilder();
+    var bar = config.ui.bar;
+    var space = config.ui.space;
+
     nodes.forEach(function(node, i) {
         var titleLen = computeTitleLen(node);
+        var gap = '';
 
         if (i == 0) {
-            boxline.push(' '.dup(intervals[i] - Math.floor(titleLen/2) - 1));
-            text.push(' '.dup(intervals[i] - Math.floor(titleLen/2) - 1));
+            gap = space.dup(intervals[i] - Math.floor(titleLen/2) - 1);
+            boxline.push(gap);
+            textip.push(gap);
+            textname.push(gap);
         }
-        blankline.push(' '.dup(intervals[i]) + bar);
 
-        boxline.push(corner);
+        blankline.push(space.dup(intervals[i]) + bar);
+
+        boxline.push(config.ui.corner);
         boxline.push('-'.dup(titleLen));
-        boxline.push(corner);
-        if (i != nodes.length-1) {
-            boxline.push(' '.dup(intervals[i+1] - (titleLen +
-                computeTitleLen(nodes[i+1]) + 2)/2));
-        }
+        boxline.push(config.ui.corner);
 
-        text.push(bar);
-        var gap = titleLen - node.ip.length;
-        text.push(' '.dup(Math.floor(gap/2)));
-        text.push(node.ip);
-        text.push(' '.dup(Math.floor((gap+1)/2)));
-        text.push(bar);
+        textip.push(bar);
+        gap = titleLen - node.ip.length;
+        textip.push(space.dup(Math.floor(gap/2)));
+        textip.push(node.ip);
+        textip.push(space.dup(Math.floor((gap+1)/2)));
+        textip.push(bar);
+        rtConfig.showIp = rtConfig.showIp || node.ip.length != 0;
+
+        textname.push(bar);
+        gap = titleLen - node.name.length;
+        textname.push(space.dup(Math.floor(gap/2)));
+        textname.push(node.name);
+        textname.push(space.dup(Math.floor((gap+1)/2)));
+        textname.push(bar);
+        rtConfig.showName = rtConfig.showName || node.name.length != 0;
+
         if (i != nodes.length-1) {
-            text.push(' '.dup(intervals[i+1] - (titleLen +
-                computeTitleLen(nodes[i+1]) + 2)/2));
+            gap = space.dup(intervals[i+1] - (titleLen +
+                computeTitleLen(nodes[i+1]) + 2)/2);
+            boxline.push(gap);
+            textip.push(gap);
+            textname.push(gap);
         }
     });
 
-    return boxline.toString() + '\n' + text.toString() + '\n' +
-        boxline.toString() + '\n' + blankline.toString();
+    return {
+        boxline: boxline,
+        textname: textname,
+        textip: textip,
+        blankline: blankline,
+    };
 };
 
-ss.drawSeqs = function() {
+
+var buildSeqs = function() {
+    var seqsline = [];
+    var bar = config.ui.bar;
+    var space = config.ui.space;
+
     seqs.forEach(function(seq) {
         if (seq.source != seq.destination) {
             var arrowline = new ut.StringBuilder();
             var msgline = new ut.StringBuilder();
-            arrowline.push(' '.dup(intervals[0]) + bar);
-            msgline.push(' '.dup(intervals[0]) + bar);
+            arrowline.push(space.dup(intervals[0]) + bar);
+            msgline.push(space.dup(intervals[0]) + bar);
 
             var i = 0;
             var found = false;
@@ -233,15 +310,16 @@ ss.drawSeqs = function() {
                         if (found) {
                             var msg = genMessage(seq);
                             var msgpad = countIntervals(i, j) - msg.length;
-                            msgline.push(' '.dup(Math.floor(msgpad/2)) + msg + ' '.dup(Math.floor((msgpad+1)/2)) + bar);
+                            msgline.push(space.dup(Math.floor(msgpad/2)) + msg +
+                                space.dup(Math.floor((msgpad+1)/2)) + bar);
                             break;
                         }
                     }
                 }
 
                 if (!found || afterfound) {
-                    arrowline.push(' '.dup(intervals[i+1]) + bar);
-                    msgline.push(' '.dup(intervals[i+1]) + bar);
+                    arrowline.push(space.dup(intervals[i+1]) + bar);
+                    msgline.push(space.dup(intervals[i+1]) + bar);
                     ++i;
                 } else {
                     i = j;
@@ -249,37 +327,109 @@ ss.drawSeqs = function() {
                 }
             }
 
-            console.log(msgline.toString() + '\n' + arrowline.toString());
+            seqsline.push(msgline);
+            seqsline.push(arrowline);
         } else {
             var topline = new ut.StringBuilder();
             var btline = new ut.StringBuilder();
             var msgline = new ut.StringBuilder();
             for (var i = -1; i != nodes.length-1; ++i) {
                 if (seq.source == nodes[i+1].id) {
-                    topline.push(' '.dup(intervals[i+1] -
-                        Math.floor(genMessage(seq).length/2) - 1) + topcorner +
-                        '-'.dup(genMessage(seq).length) + topcorner);
-                    btline.push(' '.dup(intervals[i+1] -
-                        Math.floor(genMessage(seq).length/2) - 1) + btcorner +
-                        '-'.dup(genMessage(seq).length) + btcorner);
-                    msgline.push(' '.dup(intervals[i+1] -
+                    topline.push(space.dup(intervals[i+1] -
+                        Math.floor(genMessage(seq).length/2) - 1) + config.ui.topcorner +
+                        '-'.dup(genMessage(seq).length) + config.ui.topcorner);
+                    btline.push(space.dup(intervals[i+1] -
+                        Math.floor(genMessage(seq).length/2) - 1) + config.ui.btcorner +
+                        '-'.dup(genMessage(seq).length) + config.ui.btcorner);
+                    msgline.push(space.dup(intervals[i+1] -
                         Math.floor(genMessage(seq).length/2) - 1) + bar +
                         genMessage(seq) + bar);
                 } else if (i != -1 && seq.source == nodes[i].id) {
                     var gap = intervals[i+1] - Math.floor((genMessage(seq).length-1)/2) - 1;
-                    topline.push(' '.dup(gap) + bar);
-                    btline.push(' '.dup(gap) + bar);
-                    msgline.push(' '.dup(gap) + bar);
+                    topline.push(space.dup(gap) + bar);
+                    btline.push(space.dup(gap) + bar);
+                    msgline.push(space.dup(gap) + bar);
                 } else {
-                    topline.push(' '.dup(intervals[i+1]) + bar);
-                    btline.push(' '.dup(intervals[i+1]) + bar);
-                    msgline.push(' '.dup(intervals[i+1]) + bar);
+                    topline.push(space.dup(intervals[i+1]) + bar);
+                    btline.push(space.dup(intervals[i+1]) + bar);
+                    msgline.push(space.dup(intervals[i+1]) + bar);
                 }
             }
-            console.log(topline.toString() + '\n' + msgline.toString() + '\n' + btline.toString());
+
+            seqsline.push(topline);
+            seqsline.push(msgline);
+            seqsline.push(btline);
+        }
+    });
+
+    return seqsline;
+};
+
+ss.buildAll = function() {
+    var all = [];
+    var nodesline = buildNodes();
+    all.push(nodesline.boxline);
+    if (rtConfig.showName) {
+        all.push(nodesline.textname);
+    }
+    if (rtConfig.showIp) {
+        all.push(nodesline.textip);
+    }
+    all.push(nodesline.boxline);
+    all.push(nodesline.blankline);
+
+    all = all.concat(buildSeqs());
+    all.push(nodesline.blankline);
+    return all.join(config.ui.newline);
+};
+
+ss.initPage = function() {
+    $('#seqtext textarea').val(config.seqText.mlstr());
+    $('#seqtext textarea').keyup(function() {
+        ss.parseFormattedStr($('#seqtext textarea').val());
+        $('#seq textarea').val(ss.buildAll());
+    });
+
+    // first show
+    ss.parseFormattedStr($('#seqtext textarea').val());
+    $('#seq textarea').val(ss.buildAll());
+
+    $('#psml-file-data').change(function() {
+        var file = this.files[0];
+        if (!file) {
+            return;
         }
 
+        $('#psml-file-name').text(file.fileName);
+        var reader = new FileReader();
+        reader.readAsText(file);
+        reader.onload = function(e) {
+            ss.parsePsml(this.result);
+            $('#seq textarea').val(ss.buildAll());
+        };
     });
+
+    $('#psml-file-browse').click(function() {
+        $('#psml-file-data').click();
+    });
+
+    $('#show-number-cb').prop('checked', config.showNo);
+    $('#show-number-cb').change(function() {
+        config.showNo = $(this).prop('checked');
+        $('#seq textarea').val(ss.buildAll());
+    });
+
+    $('#max-msg-len').val(config.maxMsgLen);
+    $('#max-msg-len').change(function() {
+        var len = $(this).val();
+        if (!/\d+/.test(len) || len <= 0) {
+            len = config.maxMsgLen;
+        }
+        $(this).val(len);
+        config.maxMsgLen = len;
+        $('#seq textarea').val(ss.buildAll());
+    });
+
 };
 
 // exports
