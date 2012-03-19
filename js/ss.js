@@ -6,6 +6,59 @@ var intervals = [];
 var minTitleLen = 17; // ip addr takes 15
 var minInterval = 20;
 
+var seqStr = function() {
+    /* [1]Alice(192.168.1.1) | [2]Bob(192.168.1.2) | [3]Carol(192.168.1.3)
+
+    1|1->2|sip|INVITE
+    2|2->3|sip|INVITE
+    3|3->1|sip|200 OK
+    */
+};
+
+var ss = {};
+ss.parseFormattedStr = function() {
+    var str = seqStr.mlstr().split('\n');
+    var nodeslist = str[0].split('|');
+    nodeslist.forEach(function(node, i) {
+        var nodeinfo =
+          /\[(\d+)\](\w*)(\((\d{1,3}\.\d{1,3}.\d{1,3}.\d{1,3})\))?/.exec(node);
+        if (nodeinfo) {
+            var found = false;
+            for (var i = 0; i != nodes.length; ++i) {
+                if (nodes[i].id == nodeinfo[1]) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                nodes.push({
+                    id: nodeinfo[1],
+                    name: nodeinfo[2],
+                    ip: nodeinfo[4],
+                });
+            }
+        }
+    });
+
+    str.forEach(function(seq, i) {
+        var seqinfo = /(\d*)\|(\d+)->(\d+)\|(.*)\|(.*)/.exec(seq);
+        if (seqinfo) {
+            seqs.push({
+                no: seqinfo[1],
+                time: '',
+                source: seqinfo[2],
+                destination: seqinfo[3],
+                protocol: seqinfo[4],
+                length: '',
+                info: seqinfo[5],
+            });
+        }
+    });
+    console.log(nodes);
+    console.log(seqs);
+    computeIntervals();
+};
+
 var config = {
     msgTemplate: '# $',
     maxMsgLen: 10,
@@ -17,6 +70,7 @@ var genMessage = function(seq) {
 };
 
 var computeIntervals = function() {
+    intervals.push(minInterval); // leftest
     for (var i = 0; i != nodes.length-1; ++i) {
         var intv = minInterval;
         seqs.forEach(function(seq) {
@@ -30,7 +84,6 @@ var computeIntervals = function() {
         });
         intervals.push(intv);
     }
-    console.log(intervals);
 };
 
 var countIntervals = function(i, j) {
@@ -44,9 +97,8 @@ var countIntervals = function(i, j) {
     return sum;
 };
 
-var ss = {};
 ss.parsePsml = function() {
-    var xml = '<psml version="0"> <structure> <section>No.</section> <section>Time</section> <section>Source</section> <section>Destination</section> <section>Protocol</section> <section>Length</section> <section>Info</section> </structure> <packet> <section>1207</section> <section>0.896614</section> <section>110.011.251.188</section> <section>80.156.149.133</section> <section>SIP</section> <section>338</section> <section>Request: OPTIONS sip:80.156.149.133:5060</section> </packet> <packet> <section>1208</section> <section>0.896616</section> <section>10.0.25.188</section> <section>80.156.149.133</section> <section>SIP</section> <section>342</section> <section>Request: OPTIONS sip:80.156.149.133:5060</section> </packet> <packet> <section>1209</section> <section>0.896616</section> <section>80.156.149.133</section> <section>80.156.149.133</section> <section>SIP</section> <section>342</section> <section>Request: OPTIONS sip:80.156.149.133:5060</section> </packet> </psml>';
+    var xml = '<psml version="0"> <structure> <section>No.</section> <section>Time</section> <section>Source</section> <section>Destination</section> <section>Protocol</section> <section>Length</section> <section>Info</section> </structure> <packet> <section>1207</section> <section>0.896614</section> <section>110.011.251.188</section> <section>80.156.149.133</section> <section>SIP</section> <section>338</section> <section>Request: OPTIONS sip:80.156.149.133:5060</section> </packet> <packet> <section>1208</section> <section>0.896616</section> <section>10.0.25.188</section> <section>80.156.149.133</section> <section>SIP</section> <section>342</section> <section>Request: OPTIONS sip:80.156.149.133:5060</section> </packet> <packet> <section>1209</section> <section>0.896616</section> <section>110.011.251.188</section> <section>110.011.251.188</section> <section>SIP</section> <section>342</section> <section>Request: OPTIONS sip:80.156.149.133:5060</section> </packet> </psml>';
     xmlDoc = $.parseXML(xml),
     $packets = $(xmlDoc).find('psml packet');
     $.each($packets, function(i, packet) {
@@ -125,11 +177,17 @@ ss.drawNodes = function() {
     nodes.forEach(function(node, i) {
         var titleLen = computeTitleLen(node);
 
+        if (i == 0) {
+            boxline.push(' '.dup(intervals[i] - Math.floor(titleLen/2) - 1));
+            text.push(' '.dup(intervals[i] - Math.floor(titleLen/2) - 1));
+        }
+        blankline.push(' '.dup(intervals[i]) + bar);
+
         boxline.push(corner);
         boxline.push('-'.dup(titleLen));
         boxline.push(corner);
         if (i != nodes.length-1) {
-            boxline.push(' '.dup(intervals[i] - (titleLen +
+            boxline.push(' '.dup(intervals[i+1] - (titleLen +
                 computeTitleLen(nodes[i+1]) + 2)/2));
         }
 
@@ -140,15 +198,8 @@ ss.drawNodes = function() {
         text.push(' '.dup(Math.floor((gap+1)/2)));
         text.push(bar);
         if (i != nodes.length-1) {
-            text.push(' '.dup(intervals[i] - (titleLen +
+            text.push(' '.dup(intervals[i+1] - (titleLen +
                 computeTitleLen(nodes[i+1]) + 2)/2));
-        }
-
-        if (i == 0) {
-            blankline.push(' '.dup(Math.floor(titleLen/2) + 1) + bar);
-        }
-        if (i != nodes.length-1) {
-            blankline.push(' '.dup(intervals[i]) + bar);
         }
     });
 
@@ -161,8 +212,8 @@ ss.drawSeqs = function() {
         if (seq.source != seq.destination) {
             var arrowline = new ut.StringBuilder();
             var msgline = new ut.StringBuilder();
-            arrowline.push(' '.dup(Math.floor(computeTitleLen(nodes[0])/2) + 1) + bar);
-            msgline.push(' '.dup(Math.floor(computeTitleLen(nodes[0])/2) + 1) + bar);
+            arrowline.push(' '.dup(intervals[0]) + bar);
+            msgline.push(' '.dup(intervals[0]) + bar);
 
             var i = 0;
             var found = false;
@@ -189,8 +240,8 @@ ss.drawSeqs = function() {
                 }
 
                 if (!found || afterfound) {
-                    arrowline.push(' '.dup(intervals[i]) + bar);
-                    msgline.push(' '.dup(intervals[i]) + bar);
+                    arrowline.push(' '.dup(intervals[i+1]) + bar);
+                    msgline.push(' '.dup(intervals[i+1]) + bar);
                     ++i;
                 } else {
                     i = j;
@@ -202,20 +253,30 @@ ss.drawSeqs = function() {
         } else {
             var topline = new ut.StringBuilder();
             var btline = new ut.StringBuilder();
-            topline.push(' '.dup(Math.floor(computeTitleLen(nodes[0])/2) + 1) + bar);
-            for (var i = 0; i != nodes.length-1; ++i) {
+            var msgline = new ut.StringBuilder();
+            for (var i = -1; i != nodes.length-1; ++i) {
                 if (seq.source == nodes[i+1].id) {
-                    topline.push(' '.dup(intervals[i] -
+                    topline.push(' '.dup(intervals[i+1] -
                         Math.floor(genMessage(seq).length/2) - 1) + topcorner +
                         '-'.dup(genMessage(seq).length) + topcorner);
-                } else if (seq.source == nodes[i].id) {
-                    topline.push(' '.dup(intervals[i] -
-                        Math.floor((genMessage(seq).length-1)/2) - 1) + bar);
+                    btline.push(' '.dup(intervals[i+1] -
+                        Math.floor(genMessage(seq).length/2) - 1) + btcorner +
+                        '-'.dup(genMessage(seq).length) + btcorner);
+                    msgline.push(' '.dup(intervals[i+1] -
+                        Math.floor(genMessage(seq).length/2) - 1) + bar +
+                        genMessage(seq) + bar);
+                } else if (i != -1 && seq.source == nodes[i].id) {
+                    var gap = intervals[i+1] - Math.floor((genMessage(seq).length-1)/2) - 1;
+                    topline.push(' '.dup(gap) + bar);
+                    btline.push(' '.dup(gap) + bar);
+                    msgline.push(' '.dup(gap) + bar);
                 } else {
-                    topline.push(' '.dup(intervals[i]) + bar);
+                    topline.push(' '.dup(intervals[i+1]) + bar);
+                    btline.push(' '.dup(intervals[i+1]) + bar);
+                    msgline.push(' '.dup(intervals[i+1]) + bar);
                 }
             }
-            console.log(topline.toString());
+            console.log(topline.toString() + '\n' + msgline.toString() + '\n' + btline.toString());
         }
 
     });
