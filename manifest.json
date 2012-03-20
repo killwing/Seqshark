@@ -1,7 +1,7 @@
 {
     "name": "Seqshark",
     "description": "A sequence generator for Chrome",
-    "version": "1.0",
+    "version": "1.0.1",
     "app": {
         "launch": {
             "local_path": "main.html"
