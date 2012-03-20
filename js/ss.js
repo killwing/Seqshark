@@ -491,6 +491,10 @@ ss.initPage = function() {
         var sipfmtRe = new RegExp(sipfmt, 'Request: INVITE sip:34324@efdr');
     });
     */
+
+    $('#logo').click(function() {
+        window.open('https://chrome.google.com/webstore/detail/akilelipicfcaghhikpjjkghopnpaolf?hl=zh-CN');
+    });
 };
 
 // exports

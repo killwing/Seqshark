@@ -6,3 +6,11 @@
 \____/ \___|\__, |___/_| |_|\__,_|_|  |_|\_\
                | |                          
                |_|                          
+
+Features:
+* input and edit sequence in notation text easily
+* import from (Wireshark) PSML file
+* ASCII sequence representation
+* immediately output update
+* filter sequence by protocol
+
