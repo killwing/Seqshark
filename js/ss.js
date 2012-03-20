@@ -325,7 +325,7 @@ var buildSeqs = function() {
     seqs.forEach(function(seq) {
         
         // filter protocol
-        if (seq.protocol && config.protoFilter.indexOf(seq.protocol) == -1) {
+        if (seq.protocol && config.protoFilter.length != 0 && config.protoFilter.indexOf(seq.protocol) == -1) {
             return;
         }
 
@@ -479,10 +479,14 @@ ss.initPage = function() {
     $('#protocol-filter').val(config.protoFilter.join(','));
     $('#protocol-filter').change(function() {
         var filters = $(this).val().toUpperCase().split(',');
+        filters.clean('');
         if (filters.length) {
             config.protoFilter = filters;
-            $('#seq textarea').val(ss.buildAll());
+        } else {
+            config.protoFilter = []; // show all
         }
+        console.log(config.protoFilter)
+        $('#seq textarea').val(ss.buildAll());
     });
 
     $('#message-format').val(config.msgFormat);
