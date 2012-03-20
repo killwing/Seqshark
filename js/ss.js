@@ -8,7 +8,7 @@ var minInterval = 20;
 
 var config = {
     msgFmt: '',
-    maxMsgLen: 15,
+    maxMsgLen: 20,
     showNo: true,
     ui: {
         corner: '+',
@@ -20,7 +20,7 @@ var config = {
     },
 
     seqText: function() {
-/* [1]Alice(192.168.1.1) | [2]Atlanta.com(192.168.1.2) | [3]biloxi.com(192.168.2.1) | [4]Bob(192.168.2.2)
+/* [1]Alice(192.168.1.1) | [2]atlanta.com(192.168.1.2) | [3]biloxi.com(192.168.2.1) | [4]Bob(192.168.2.2)
 
   |1   |   |off hook
  1|1->2|sip|INVITE
@@ -41,7 +41,7 @@ var config = {
 */
     },
 
-    protoFilter: ['SIP'],
+    protoFilter: ['SIP', 'ISUP'],
 };
 
 var rtConfig = {
@@ -59,6 +59,8 @@ var genMessage = function(seq) {
 };
 
 var computeIntervals = function() {
+    intervals = [];
+
     intervals.push(minInterval); // leftest
     for (var i = 0; i != nodes.length-1; ++i) {
         var intv = minInterval;
@@ -73,14 +75,16 @@ var computeIntervals = function() {
         });
         intervals.push(intv);
     }
+    console.debug('intervals', intervals);
 };
 
+// i, j is node's index
 var countIntervals = function(i, j) {
     if (i >= j) {
         return 0;
     }
     var sum = -1;
-    for (var k = i; k != j; ++k) {
+    for (var k = i+1; k != j+1; ++k) {
         sum += intervals[k] + 1;
     }
     return sum;
@@ -116,7 +120,7 @@ ss.parseFormattedStr = function(text) {
     var nodeslist = str[0].split('|');
     nodeslist.forEach(function(node, i) {
         var nodeinfo =
-          /\[(\d+)\]([\w\.\-\_]*)(\((\d{1,3}\.\d{1,3}.\d{1,3}.\d{1,3})\))?/.exec(node);
+          /\[(\d+)\]([\w\.\-\_]*)(\(([\d\.]+)\))?/.exec(node);
         if (nodeinfo) {
             var found = false;
             for (var i = 0; i != nodes.length; ++i) {
@@ -136,7 +140,7 @@ ss.parseFormattedStr = function(text) {
     });
 
     str.forEach(function(seq, i) {
-        var seqinfo = /(\d*)\s*\|\s*(\d+)\s*(->\s*(\d+))?\s*\|(.*)\|(.*)/.exec(seq);
+        var seqinfo = /(\d*)\s*\|\s*(\d+)\s*(->\s*(\d+))?\s*\|(.*?)\|(.*)/.exec(seq);
         if (seqinfo) {
             seqs.push({
                 no: seqinfo[1] || '',
@@ -156,6 +160,33 @@ ss.parseFormattedStr = function(text) {
 };
 
 
+ss.formatToStr = function() {
+    var nodesStr = new ut.StringBuilder();
+    var seqsStr = new ut.StringBuilder();
+    nodes.forEach(function(node, i) {
+        nodesStr.push('['+node.id+']');
+        if (node.name) {
+            nodesStr.push(node.name);
+        }
+        if (node.ip) {
+            nodesStr.push('('+node.ip+')');
+        }
+        if (i == nodes.length-1) {
+            nodesStr.push('\n');
+        } else {
+            nodesStr.push('|');
+        }
+    });
+    nodesStr.push('\n');
+
+    seqs.forEach(function(seq, i) {
+        seqsStr.push(seq.no+'|');
+        seqsStr.push(seq.source+'->'+seq.destination+'|');
+        seqsStr.push(seq.protocol+'|');
+        seqsStr.push(seq.info+'\n')
+    });
+    return nodesStr.toString() + seqsStr.toString();
+};
 
 ss.parsePsml = function(psml) {
     ss.resetData();
@@ -164,11 +195,6 @@ ss.parsePsml = function(psml) {
     $packets = $(xmlDoc).find('psml packet');
     $.each($packets, function(i, packet) {
         var sections = $(packet).children('section');
-
-        //if (config.protoFilter.indexOf(sections[4].textContent) == -1) {
-        //    return;
-        //}
-
         var src = sections[2].textContent;
         var dst = sections[3].textContent;
 
@@ -204,12 +230,23 @@ ss.parsePsml = function(psml) {
             nodes.push(dstnode);
         }
 
+        // only take main protocol
+        var prot = sections[4].textContent;
+        var protsep = prot.indexOf('/');
+        if (protsep != -1) {
+            prot = prot.substring(0, protsep);
+        }
+        protsep = prot.indexOf('(');
+        if (protsep != -1) {
+            prot = prot.substring(0, protsep);
+        }
+
         seqs.push({
             no: sections[0].textContent,
             time: sections[1].textContent,
             source: srcnode.id,
             destination: dstnode.id,
-            protocol: sections[4].textContent,
+            protocol: prot,
             length: sections[5].textContent,
             info: sections[6].textContent,
         });
@@ -286,6 +323,12 @@ var buildSeqs = function() {
     var space = config.ui.space;
 
     seqs.forEach(function(seq) {
+        
+        // filter protocol
+        if (seq.protocol && config.protoFilter.indexOf(seq.protocol) == -1) {
+            return;
+        }
+
         if (seq.source != seq.destination) {
             var arrowline = new ut.StringBuilder();
             var msgline = new ut.StringBuilder();
@@ -406,6 +449,7 @@ ss.initPage = function() {
         reader.onload = function(e) {
             ss.parsePsml(this.result);
             $('#seq textarea').val(ss.buildAll());
+            $('#seqtext textarea').val(ss.formatToStr());
         };
     });
 
@@ -427,9 +471,23 @@ ss.initPage = function() {
         }
         $(this).val(len);
         config.maxMsgLen = len;
+        // re-compute
+        computeIntervals();
         $('#seq textarea').val(ss.buildAll());
     });
 
+    $('#protocol-filter').val(config.protoFilter.join(','));
+    $('#protocol-filter').change(function() {
+        var filters = $(this).val().toUpperCase().split(',');
+        if (filters.length) {
+            config.protoFilter = filters;
+            $('#seq textarea').val(ss.buildAll());
+        }
+    });
+
+    $('#message-format').val(config.msgFormat);
+    $('#message-format').change(function() {
+    });
 };
 
 // exports
@@ -440,6 +498,8 @@ if (typeof module !== 'undefined' && module.exports) {
     root.ss = ss;
 }
 
+//var sipfmt = ut.escapeRegex('Request: (\w+) sip:.+|Status: ([\w ]+),?.*');
+//var sipfmtRe = new RegExp(sipfmt, 'Request: INVITE sip:34324@efdr');
 
 })();
 

@@ -1,6 +1,6 @@
 {
     "name": "Seqshark",
-    "description": "A seqence generator for Chrome",
+    "description": "A sequence generator for Chrome",
     "version": "1.0",
     "app": {
         "launch": {

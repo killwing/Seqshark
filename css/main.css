@@ -11,7 +11,7 @@ h2 {
 
 #container {
     width: 99%;
-    height: 300px;
+    height: 330px;
     margin: 0px;
     padding: 0px;
     display: -webkit-box;
@@ -44,7 +44,7 @@ h2 {
 
 #seq textarea {
     width: 98%;
-    height: 550px;
+    height: 560px;
     font-family: Lucida Console, Monaco, Courier New, mono, monospace;
     font-size: 12px;
     resize: none;
