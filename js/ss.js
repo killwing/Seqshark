@@ -3,6 +3,7 @@
 var nodes = [];
 var seqs = [];
 var intervals = [];
+
 var minTitleLen = 17; // ip addr takes 15
 var minInterval = 20;
 
@@ -10,6 +11,8 @@ var config = {
     msgFmt: '',
     maxMsgLen: 20,
     showNo: true,
+    showName: false,
+    showIp: false,
     ui: {
         corner: '+',
         topcorner: '.',
@@ -42,11 +45,6 @@ var config = {
     },
 
     protoFilter: ['SIP', 'ISUP'],
-};
-
-var rtConfig = {
-    showName: false,
-    showIp: false,
 };
 
 var genMessage = function(seq) {
@@ -102,19 +100,15 @@ var computeTitleLen = function(node) {
 };
 
 
-var ss = {};
-ss.getConfig = function() {
-    return config;
-};
-
-ss.resetData = function() {
+var resetData = function() {
     nodes = [];
     seqs = [];
     intervals = [];
 };
 
+var ss = {};
 ss.parseFormattedStr = function(text) {
-    ss.resetData();
+    resetData();
 
     var str = text.split('\n');
     var nodeslist = str[0].split('|');
@@ -189,7 +183,7 @@ ss.formatToStr = function() {
 };
 
 ss.parsePsml = function(psml) {
-    ss.resetData();
+    resetData();
 
     xmlDoc = $.parseXML(psml),
     $packets = $(xmlDoc).find('psml packet');
@@ -266,6 +260,8 @@ var buildNodes = function() {
     var bar = config.ui.bar;
     var space = config.ui.space;
 
+    config.showIp = false;
+    config.showName = false;
     nodes.forEach(function(node, i) {
         var titleLen = computeTitleLen(node);
         var gap = '';
@@ -289,7 +285,7 @@ var buildNodes = function() {
         textip.push(node.ip);
         textip.push(space.dup(Math.floor((gap+1)/2)));
         textip.push(bar);
-        rtConfig.showIp = rtConfig.showIp || node.ip.length != 0;
+        config.showIp = config.showIp || node.ip.length != 0;
 
         textname.push(bar);
         gap = titleLen - node.name.length;
@@ -297,7 +293,7 @@ var buildNodes = function() {
         textname.push(node.name);
         textname.push(space.dup(Math.floor((gap+1)/2)));
         textname.push(bar);
-        rtConfig.showName = rtConfig.showName || node.name.length != 0;
+        config.showName = config.showName || node.name.length != 0;
 
         if (i != nodes.length-1) {
             gap = space.dup(intervals[i+1] - (titleLen +
@@ -412,10 +408,10 @@ ss.buildAll = function() {
     var all = [];
     var nodesline = buildNodes();
     all.push(nodesline.boxline);
-    if (rtConfig.showName) {
+    if (config.showName) {
         all.push(nodesline.textname);
     }
-    if (rtConfig.showIp) {
+    if (config.showIp) {
         all.push(nodesline.textip);
     }
     all.push(nodesline.boxline);
@@ -485,13 +481,16 @@ ss.initPage = function() {
         } else {
             config.protoFilter = []; // show all
         }
-        console.log(config.protoFilter)
         $('#seq textarea').val(ss.buildAll());
     });
 
-    $('#message-format').val(config.msgFormat);
+    /*
+    $('#message-format').val(config.msgFmt);
     $('#message-format').change(function() {
+        var sipfmt = ut.escapeRegex('Request: (\w+) sip:.+|Status: ([\w ]+),?.*');
+        var sipfmtRe = new RegExp(sipfmt, 'Request: INVITE sip:34324@efdr');
     });
+    */
 };
 
 // exports
@@ -502,8 +501,6 @@ if (typeof module !== 'undefined' && module.exports) {
     root.ss = ss;
 }
 
-//var sipfmt = ut.escapeRegex('Request: (\w+) sip:.+|Status: ([\w ]+),?.*');
-//var sipfmtRe = new RegExp(sipfmt, 'Request: INVITE sip:34324@efdr');
 
 })();
 
