@@ -155,31 +155,31 @@ ss.parseFormattedStr = function(text) {
 
 
 ss.formatToStr = function() {
-    var nodesStr = new ut.StringBuilder();
-    var seqsStr = new ut.StringBuilder();
+    var nodesStr = '';
+    var seqsStr = '';
     nodes.forEach(function(node, i) {
-        nodesStr.push('['+node.id+']');
+        nodesStr += '['+node.id+']';
         if (node.name) {
-            nodesStr.push(node.name);
+            nodesStr += node.name;
         }
         if (node.ip) {
-            nodesStr.push('('+node.ip+')');
+            nodesStr += '('+node.ip+')';
         }
         if (i == nodes.length-1) {
-            nodesStr.push('\n');
+            nodesStr += '\n';
         } else {
-            nodesStr.push('|');
+            nodesStr += '|';
         }
     });
-    nodesStr.push('\n');
+    nodesStr += '\n';
 
     seqs.forEach(function(seq, i) {
-        seqsStr.push(seq.no+'|');
-        seqsStr.push(seq.source+'->'+seq.destination+'|');
-        seqsStr.push(seq.protocol+'|');
-        seqsStr.push(seq.info+'\n')
+        seqsStr += seq.no+'|';
+        seqsStr += seq.source+'->'+seq.destination+'|';
+        seqsStr += seq.protocol+'|';
+        seqsStr += seq.info+'\n';
     });
-    return nodesStr.toString() + seqsStr.toString();
+    return nodesStr + seqsStr;
 };
 
 ss.parsePsml = function(psml) {
@@ -253,10 +253,10 @@ ss.parsePsml = function(psml) {
 
 
 var buildNodes = function() {
-    var boxline = new ut.StringBuilder();
-    var textip = new ut.StringBuilder();
-    var textname = new ut.StringBuilder();
-    var blankline = new ut.StringBuilder();
+    var boxline = '';
+    var textip = '';
+    var textname = '';
+    var blankline = '';
     var bar = config.ui.bar;
     var space = config.ui.space;
 
@@ -267,40 +267,40 @@ var buildNodes = function() {
         var gap = '';
 
         if (i == 0) {
-            gap = space.dup(intervals[i] - Math.floor(titleLen/2) - 1);
-            boxline.push(gap);
-            textip.push(gap);
-            textname.push(gap);
+            gap = _.dup(space, intervals[i] - Math.floor(titleLen/2) - 1);
+            boxline += gap;
+            textip += gap;
+            textname += gap;
         }
 
-        blankline.push(space.dup(intervals[i]) + bar);
+        blankline += _.dup(space, intervals[i]) + bar;
 
-        boxline.push(config.ui.corner);
-        boxline.push('-'.dup(titleLen));
-        boxline.push(config.ui.corner);
+        boxline += config.ui.corner;
+        boxline += _.dup('-', titleLen);
+        boxline += config.ui.corner;
 
-        textip.push(bar);
+        textip += bar;
         gap = titleLen - node.ip.length;
-        textip.push(space.dup(Math.floor(gap/2)));
-        textip.push(node.ip);
-        textip.push(space.dup(Math.floor((gap+1)/2)));
-        textip.push(bar);
+        textip += _.dup(space, Math.floor(gap/2));
+        textip += node.ip;
+        textip += _.dup(space, Math.floor((gap+1)/2));
+        textip += bar;
         config.showIp = config.showIp || node.ip.length != 0;
 
-        textname.push(bar);
+        textname += bar;
         gap = titleLen - node.name.length;
-        textname.push(space.dup(Math.floor(gap/2)));
-        textname.push(node.name);
-        textname.push(space.dup(Math.floor((gap+1)/2)));
-        textname.push(bar);
+        textname += _.dup(space, Math.floor(gap/2));
+        textname += node.name;
+        textname += _.dup(space, Math.floor((gap+1)/2));
+        textname += bar;
         config.showName = config.showName || node.name.length != 0;
 
         if (i != nodes.length-1) {
-            gap = space.dup(intervals[i+1] - (titleLen +
+            gap = _.dup(space, intervals[i+1] - (titleLen +
                 computeTitleLen(nodes[i+1]) + 2)/2);
-            boxline.push(gap);
-            textip.push(gap);
-            textname.push(gap);
+            boxline += gap;
+            textip += gap;
+            textname += gap;
         }
     });
 
@@ -326,10 +326,10 @@ var buildSeqs = function() {
         }
 
         if (seq.source != seq.destination) {
-            var arrowline = new ut.StringBuilder();
-            var msgline = new ut.StringBuilder();
-            arrowline.push(space.dup(intervals[0]) + bar);
-            msgline.push(space.dup(intervals[0]) + bar);
+            var arrowline = '';
+            var msgline = '';
+            arrowline += _.dup(space, intervals[0]) + bar;
+            msgline += _.dup(space, intervals[0]) + bar;
 
             var i = 0;
             var found = false;
@@ -337,28 +337,30 @@ var buildSeqs = function() {
             while (i < nodes.length-1) {
                 if (!found) {
                     for (var j = i+1; j != nodes.length; ++j) {
-                        var pad = '-'.dup(countIntervals(i, j) - 1);
+                        var pad = _.dup('-', (countIntervals(i, j) - 1));
                         if (seq.source == nodes[i].id && seq.destination == nodes[j].id) {
                             found = true;
-                            arrowline.push(pad + '>' + bar);
+                            arrowline += pad + '>' + bar;
                         } else if (seq.source == nodes[j].id && seq.destination == nodes[i].id) {
                             found = true;
-                            arrowline.push('<' + pad + bar);
+                            arrowline += '<' + pad + bar;
                         }
 
                         if (found) {
                             var msg = genMessage(seq);
                             var msgpad = countIntervals(i, j) - msg.length;
-                            msgline.push(space.dup(Math.floor(msgpad/2)) + msg +
-                                space.dup(Math.floor((msgpad+1)/2)) + bar);
+                            msgline += _.dup(space, Math.floor(msgpad/2))
+                                     + msg
+                                     + _.dup(space, Math.floor((msgpad+1)/2)) 
+                                     + bar;
                             break;
                         }
                     }
                 }
 
                 if (!found || afterfound) {
-                    arrowline.push(space.dup(intervals[i+1]) + bar);
-                    msgline.push(space.dup(intervals[i+1]) + bar);
+                    arrowline += _.dup(space, intervals[i+1]) + bar;
+                    msgline += _.dup(space, intervals[i+1]) + bar;
                     ++i;
                 } else {
                     i = j;
@@ -369,29 +371,32 @@ var buildSeqs = function() {
             seqsline.push(msgline);
             seqsline.push(arrowline);
         } else {
-            var topline = new ut.StringBuilder();
-            var btline = new ut.StringBuilder();
-            var msgline = new ut.StringBuilder();
+            var topline = '';
+            var btline = '';
+            var msgline = '';
             for (var i = -1; i != nodes.length-1; ++i) {
                 if (seq.source == nodes[i+1].id) {
-                    topline.push(space.dup(intervals[i+1] -
-                        Math.floor(genMessage(seq).length/2) - 1) + config.ui.topcorner +
-                        '-'.dup(genMessage(seq).length) + config.ui.topcorner);
-                    btline.push(space.dup(intervals[i+1] -
-                        Math.floor(genMessage(seq).length/2) - 1) + config.ui.btcorner +
-                        '-'.dup(genMessage(seq).length) + config.ui.btcorner);
-                    msgline.push(space.dup(intervals[i+1] -
-                        Math.floor(genMessage(seq).length/2) - 1) + bar +
-                        genMessage(seq) + bar);
+                    topline += _.dup(space, intervals[i+1] - Math.floor(genMessage(seq).length/2) - 1)
+                             + config.ui.topcorner
+                             + _.dup('-', genMessage(seq).length) 
+                             + config.ui.topcorner;
+                    btline += _.dup(space, intervals[i+1] - Math.floor(genMessage(seq).length/2) - 1) 
+                            + config.ui.btcorner 
+                            + _.dup('-', genMessage(seq).length) 
+                            + config.ui.btcorner;
+                    msgline += _.dup(space, intervals[i+1] - Math.floor(genMessage(seq).length/2) - 1) 
+                             + bar 
+                             + genMessage(seq) 
+                             + bar;
                 } else if (i != -1 && seq.source == nodes[i].id) {
                     var gap = intervals[i+1] - Math.floor((genMessage(seq).length-1)/2) - 1;
-                    topline.push(space.dup(gap) + bar);
-                    btline.push(space.dup(gap) + bar);
-                    msgline.push(space.dup(gap) + bar);
+                    topline += _.dup(space, gap) + bar;
+                    btline += _.dup(space, gap) + bar;
+                    msgline += _.dup(space, gap) + bar;
                 } else {
-                    topline.push(space.dup(intervals[i+1]) + bar);
-                    btline.push(space.dup(intervals[i+1]) + bar);
-                    msgline.push(space.dup(intervals[i+1]) + bar);
+                    topline += _.dup(space, intervals[i+1]) + bar;
+                    btline += _.dup(space, intervals[i+1]) + bar;
+                    msgline += _.dup(space, intervals[i+1]) + bar;
                 }
             }
 
@@ -423,7 +428,7 @@ ss.buildAll = function() {
 };
 
 ss.initPage = function() {
-    $('#seqtext textarea').val(config.seqText.mlstr());
+    $('#seqtext textarea').val(_.mlstr(config.seqText));
     $('#seqtext textarea').keyup(function() {
         ss.parseFormattedStr($('#seqtext textarea').val());
         $('#seq textarea').val(ss.buildAll());
@@ -475,7 +480,7 @@ ss.initPage = function() {
     $('#protocol-filter').val(config.protoFilter.join(','));
     $('#protocol-filter').change(function() {
         var filters = $(this).val().toUpperCase().split(',');
-        filters.clean('');
+        _.erase(filters, '');
         if (filters.length) {
             config.protoFilter = filters;
         } else {
