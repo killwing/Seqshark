@@ -498,7 +498,7 @@ ss.initPage = function() {
     */
 
     $('#logo').click(function() {
-        window.open('https://chrome.google.com/webstore/detail/akilelipicfcaghhikpjjkghopnpaolf?hl=zh-CN');
+        window.open('https://chrome.google.com/webstore/detail/akilelipicfcaghhikpjjkghopnpaolf?hl=en-US');
     });
 };
 
