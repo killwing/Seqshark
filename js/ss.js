@@ -444,7 +444,7 @@ ss.initPage = function() {
             return;
         }
 
-        $('#psml-file-name').text(file.fileName);
+        //$('#psml-file-name').text(file.name);
         var reader = new FileReader();
         reader.readAsText(file);
         reader.onload = function(e) {
