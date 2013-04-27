@@ -185,7 +185,7 @@ ss.formatToStr = function() {
 ss.parsePsml = function(psml) {
     resetData();
 
-    xmlDoc = $.parseXML(psml),
+    var xmlDoc = $.parseXML(psml);
     $packets = $(xmlDoc).find('psml packet');
     $.each($packets, function(i, packet) {
         var sections = $(packet).children('section');
